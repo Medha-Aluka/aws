@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Music Subscription - Main</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <style>
+    body { background:#f0f2f5; }
+    .section { background:#fff; border-radius:8px; padding:25px; margin-bottom:20px; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+    .song-card { border:1px solid #ddd; border-radius:6px; padding:15px; margin-bottom:12px; display:flex; align-items:center; gap:15px; }
+    .song-card img { width:60px; height:60px; object-fit:cover; border-radius:4px; }
+    .song-info { flex:1; }
+    .song-info p { margin:2px 0; font-size:14px; }
+    .song-info strong { font-size:15px; }
+    .no-result { color:#888; font-style:italic; }
+    h4 { border-bottom:2px solid #007bff; padding-bottom:8px; margin-bottom:20px; }
+    .navbar { background:#343a40!important; }
+  </style>
+</head>
+<body>
+
+<!-- Top navigation bar -->
+<nav class="navbar navbar-dark bg-dark px-4 d-flex justify-content-between align-items-center">
+  <span class="navbar-brand mb-0 h1">Music Subscription</span>
+  <div class="d-flex align-items-center">
+    <span id="welcome-msg" class="text-white mr-3"></span>
+    <a href="#" class="btn btn-outline-light btn-sm" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="container mt-4">
+
+  <!-- ── USER AREA ── -->
+  <div class="section">
+    <h4>User Area</h4>
+    <p>Welcome, <strong id="display-username"></strong>!</p>
+    <p>Email: <span id="display-email"></span></p>
+  </div>
+
+  <!-- ── SUBSCRIPTION AREA ── -->
+  <div class="section">
+    <h4>Your Subscriptions</h4>
+    <div id="subscription-list">
+      <p class="no-result">Loading your subscriptions...</p>
+    </div>
+  </div>
+
+  <!-- ── QUERY AREA ── -->
+  <div class="section">
+    <h4>Search for Music</h4>
+    <div class="row">
+      <div class="col-md-3 mb-2">
+        <input type="text" id="q-title"  class="form-control" placeholder="Title">
+      </div>
+      <div class="col-md-3 mb-2">
+        <input type="text" id="q-artist" class="form-control" placeholder="Artist">
+      </div>
+      <div class="col-md-2 mb-2">
+        <input type="text" id="q-year"   class="form-control" placeholder="Year">
+      </div>
+      <div class="col-md-3 mb-2">
+        <input type="text" id="q-album"  class="form-control" placeholder="Album">
+      </div>
+      <div class="col-md-1 mb-2">
+        <button class="btn btn-primary btn-block" onclick="querySongs()">Query</button>
+      </div>
+    </div>
+    <div id="query-results" class="mt-3"></div>
+  </div>
+
+</div>
+
+<script>
+  
+  const BACKEND_URL = 'https://igximhopah.execute-api.us-east-1.amazonaws.com/prod';
+
+  const email     = sessionStorage.getItem('email');
+  const user_name = sessionStorage.getItem('user_name');
+
+  // If not logged in, redirect to login page
+  if (!email || !user_name) {
+    window.location.href = 'login.html';
+  }
+
+  // Show user info
+  $('#display-username').text(user_name);
+  $('#display-email').text(email);
+
+  // Load subscriptions when page loads
+  loadSubscriptions();
+
+  // LOAD SUBSCRIPTIONS
+  function loadSubscriptions() {
+    $.ajax({
+      url: BACKEND_URL + '/subscriptions?email=' + encodeURIComponent(email),
+      type: 'GET',
+      success: function(data) {
+        const subs = data.subscriptions;
+        if (!subs || subs.length === 0) {
+          $('#subscription-list').html('<p class="no-result">No subscriptions yet. Search for music below and subscribe!</p>');
+          return;
+        }
+        let html = '';
+        subs.forEach(function(song) {
+          html += buildSongCard(song, 'remove');
+        });
+        $('#subscription-list').html(html);
+      },
+      error: function() {
+        $('#subscription-list').html('<p class="no-result">Could not load subscriptions.</p>');
+      }
+    });
+  }
+
+  //  QUERY SONGS
+  function querySongs() {
+    const title  = $('#q-title').val().trim();
+    const artist = $('#q-artist').val().trim();
+    const year   = $('#q-year').val().trim();
+    const album  = $('#q-album').val().trim();
+
+    if (!title && !artist && !year && !album) {
+      $('#query-results').html('<p class="no-result">Please enter at least one search field.</p>');
+      return;
+    }
+
+    let params = [];
+    if (title)  params.push('title='  + encodeURIComponent(title));
+    if (artist) params.push('artist=' + encodeURIComponent(artist));
+    if (year)   params.push('year='   + encodeURIComponent(year));
+    if (album)  params.push('album='  + encodeURIComponent(album));
+
+    $.ajax({
+      url: BACKEND_URL + '/songs?' + params.join('&'),
+      type: 'GET',
+      success: function(data) {
+        if (!data.results || data.results.length === 0) {
+          $('#query-results').html('<p class="no-result">No result is retrieved. Please query again</p>');
+          return;
+        }
+        let html = '';
+        data.results.forEach(function(song) {
+          html += buildSongCard(song, 'subscribe');
+        });
+        $('#query-results').html(html);
+      },
+      error: function() {
+        $('#query-results').html('<p class="no-result">No result is retrieved. Please query again</p>');
+      }
+    });
+  }
+
+  // BUILD SONG CARD HTML
+  function buildSongCard(song, action) {
+    const songKeyEncoded = encodeURIComponent(song.song_key || (song.title + '#' + song.album));
+    const btn = action === 'subscribe'
+      ? `<button class="btn btn-success btn-sm" onclick='subscribeSong(${JSON.stringify(song)})'>Subscribe</button>`
+      : `<button class="btn btn-danger btn-sm" onclick="removeSong('${songKeyEncoded}', this)">Remove</button>`;
+
+    return `
+      <div class="song-card">
+        <img src="${song.s3_image_url || ''}" alt="${song.artist}" onerror="this.src='https://via.placeholder.com/60'">
+        <div class="song-info">
+          <strong>${song.title}</strong>
+          <p>Artist: ${song.artist}</p>
+          <p>Year: ${song.year} | Album: ${song.album}</p>
+        </div>
+        ${btn}
+      </div>`;
+  }
+
+  // SUBSCRIBE TO A SONG
+  function subscribeSong(song) {
+    $.ajax({
+      url: BACKEND_URL + '/subscribe',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        email:     email,
+        title:     song.title,
+        artist:    song.artist,
+        year:      song.year,
+        album:     song.album,
+        image_url: song.image_url
+      }),
+      success: function() {
+        alert('Subscribed to: ' + song.title);
+        loadSubscriptions();
+      },
+      error: function() { alert('Failed to subscribe. Please try again.'); }
+    });
+  }
+
+  //REMOVE A SUBSCRIPTION
+  function removeSong(songKeyEncoded, btn) {
+    const song_key = decodeURIComponent(songKeyEncoded);
+    $.ajax({
+      url: BACKEND_URL + '/unsubscribe',
+      type: 'DELETE',
+      contentType: 'application/json',
+      data: JSON.stringify({ email: email, song_key: song_key }),
+      success: function() {
+        $(btn).closest('.song-card').remove();
+        if ($('#subscription-list .song-card').length === 0) {
+          $('#subscription-list').html('<p class="no-result">No subscriptions yet.</p>');
+        }
+      },
+      error: function() { alert('Failed to remove. Please try again.'); }
+    });
+  }
+
+  // LOGOUT 
+  function logout() {
+    sessionStorage.clear();
+    window.location.href = 'login.html';
+  }
+</script>
+</body>
+</html>
