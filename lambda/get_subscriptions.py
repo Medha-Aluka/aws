@@ -20,8 +20,9 @@ def lambda_handler(event, context):
     params = event.get('queryStringParameters') or {}
     email  = params.get('email', '').strip()
 
+    # Restrict CORS to the S3-hosted frontend origin only (security best practice)
     headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin':  'http://music-app-website-s4154047.s3-website-us-east-1.amazonaws.com',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'GET,OPTIONS'
     }

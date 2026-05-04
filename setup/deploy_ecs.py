@@ -14,7 +14,7 @@ ecs = boto3.client('ecs', region_name=REGION)
 ec2 = boto3.client('ec2', region_name=REGION)
 iam = boto3.client('iam', region_name=REGION)
 
-# ── Create ECS service linked role if it doesn't exist ──
+# Create ECS service linked role if it doesn't exist
 print("Ensuring ECS service linked role exists...")
 try:
     iam.create_service_linked_role(AWSServiceName='ecs.amazonaws.com')
@@ -32,12 +32,12 @@ with open(uri_file) as f:
     IMAGE_URI = f.read().strip() + ':latest'
 print(f"Using image: {IMAGE_URI}")
 
-# ── Step 1: Create ECS Cluster ──
+# Step 1: Create ECS Cluster
 print("\nCreating ECS cluster...")
 ecs.create_cluster(clusterName=CLUSTER)
 print(f"  Cluster '{CLUSTER}' ready!")
 
-# ── Step 2: Register Task Definition ──
+#Step 2: Register Task Definition
 print("\nRegistering task definition...")
 task_def = {
     'family': TASK_DEF,
@@ -67,7 +67,7 @@ resp = ecs.register_task_definition(**task_def)
 task_arn = resp['taskDefinition']['taskDefinitionArn']
 print(f"  Task definition registered!")
 
-# ── Step 3: Get default VPC and subnets ──
+# Step 3: Get default VPC and subnets
 print("\nFinding default VPC and subnets...")
 vpcs = ec2.describe_vpcs(Filters=[{'Name': 'isDefault', 'Values': ['true']}])
 vpc_id = vpcs['Vpcs'][0]['VpcId']
@@ -76,7 +76,7 @@ subnets = ec2.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
 subnet_ids = [s['SubnetId'] for s in subnets['Subnets'][:2]]
 print(f"  VPC: {vpc_id}, Subnets: {subnet_ids}")
 
-# ── Step 4: Create Security Group for ECS ──
+# Step 4: Create Security Group for ECS
 print("\nCreating security group...")
 try:
     sg = ec2.create_security_group(
@@ -105,7 +105,7 @@ except ec2.exceptions.ClientError as e:
     else:
         raise
 
-# ── Step 5: Create ECS Service ──
+# Step 5: Create ECS Service
 print("\nCreating ECS service (Fargate)...")
 try:
     svc = ecs.create_service(
@@ -151,7 +151,7 @@ except Exception as e:
         print(f"  Service error: {e}")
         raise
 
-# ── Step 6: Wait for task to start and get public IP ──
+# Step 6: Wait for task to start and get public IP 
 print("\nWaiting for ECS task to start (this takes ~2 minutes)...")
 time.sleep(30)
 

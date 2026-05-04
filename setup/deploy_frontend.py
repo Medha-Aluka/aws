@@ -8,7 +8,7 @@ FRONTEND_DIR    = os.path.join(os.path.dirname(__file__), '../frontend')
 
 s3 = boto3.client('s3', region_name=REGION)
 
-# ── Step 1: Create website bucket ──
+# Step 1: Create website bucket
 print(f"Creating website bucket: {WEBSITE_BUCKET}")
 try:
     s3.create_bucket(Bucket=WEBSITE_BUCKET)
@@ -16,7 +16,7 @@ try:
 except Exception as e:
     print(f"  Bucket already exists: {e}")
 
-# ── Step 2: Disable block public access (needed for static website) ──
+# Step 2: Disable block public access (needed for static website) ──
 s3.put_public_access_block(
     Bucket=WEBSITE_BUCKET,
     PublicAccessBlockConfiguration={
@@ -27,7 +27,7 @@ s3.put_public_access_block(
     }
 )
 
-# ── Step 3: Add bucket policy to allow public read ──
+# Step 3: Add bucket policy to allow public read 
 policy = {
     "Version": "2012-10-17",
     "Statement": [{
@@ -43,7 +43,7 @@ s3.put_bucket_policy(
 )
 print("  Public read policy applied!")
 
-# ── Step 4: Enable static website hosting ──
+# Step 4: Enable static website hosting
 s3.put_bucket_website(
     Bucket=WEBSITE_BUCKET,
     WebsiteConfiguration={
@@ -53,7 +53,7 @@ s3.put_bucket_website(
 )
 print("  Static website hosting enabled!")
 
-# ── Step 5: Upload all HTML files ──
+#Step 5: Upload all HTML files
 print("\nUploading HTML files...")
 html_files = ['login.html', 'register.html', 'main.html']
 for filename in html_files:

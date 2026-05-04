@@ -9,7 +9,7 @@ REPO_NAME  = 'music-app'
 
 ecr = boto3.client('ecr', region_name=REGION)
 
-# ── Step 1: Create ECR repository ──
+# step 1: Create ECR repository
 print("Creating ECR repository...")
 try:
     resp = ecr.create_repository(repositoryName=REPO_NAME)
@@ -20,7 +20,7 @@ except ecr.exceptions.RepositoryAlreadyExistsException:
     repo_uri = resp['repositories'][0]['repositoryUri']
     print(f"  Already exists: {repo_uri}")
 
-# ── Step 2: Get ECR login token and login Docker ──
+# Step 2: Get ECR login token and login Docker
 print("\nLogging Docker into ECR...")
 token = ecr.get_authorization_token()
 auth = token['authorizationData'][0]
@@ -35,7 +35,6 @@ if result.returncode == 0:
 else:
     print(f"  Login output: {result.stdout} {result.stderr}")
 
-# ── Step 3: Build Docker image ──
 backend_dir = os.path.join(os.path.dirname(__file__), '../backend')
 backend_dir = os.path.abspath(backend_dir)
 print(f"\nBuilding Docker image from: {backend_dir}")
@@ -49,7 +48,7 @@ if result.returncode != 0:
     exit(1)
 print("  Docker image built!")
 
-# ── Step 4: Tag and push image to ECR ──
+# Step 4: Tagging and push image to ECR 
 print("\nTagging image...")
 subprocess.run(f'docker tag {REPO_NAME}:latest {repo_uri}:latest', shell=True)
 
@@ -64,7 +63,6 @@ print(f"IMAGE PUSHED TO ECR!")
 print(f"Image URI: {repo_uri}:latest")
 print(f"{'='*60}")
 
-# Save repo_uri for next script
 with open(os.path.join(os.path.dirname(__file__), 'ecr_uri.txt'), 'w') as f:
     f.write(repo_uri)
 print("\nSaved image URI to ecr_uri.txt")
